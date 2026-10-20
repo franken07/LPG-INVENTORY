@@ -1,49 +1,39 @@
-
-name: Build LPG Manager Android APK
+name: Build Android APK
 
 on:
-  workflow_dispatch:
   push:
-    branches: [main]
+    branches: [ main ]
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
-
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
+      - uses: actions/checkout@v4
+      
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
-
+          python-version: '3.12' # Matches the runner environment python version
+          
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
-          distribution: temurin
-          java-version: "17"
-
-      - name: Install deployment tool
+          distribution: 'temurin'
+          java-version: '17'
+          
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install PySide6
-
-      - name: Initialize deployment configuration
-        run: |
-          pyside6-android-deploy --init
-
-      - name: Build Android APK
-        run: |
-          pyside6-android-deploy --name "LPG Manager" --force
-
-      - name: Upload APK
-        if: always()
+          pip install pyside6 shiboken6 jinja2 pkginfo tqdm packaging==24.1
+          
+      - name: Initialize Android Deploy
+        run: pyside6-android-deploy --init
+        
+      - name: Build APK
+        run: pyside6-android-deploy --config-file pysidedeploy.spec
+        
+      - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: lpg-manager-apk
-          path: |
-            **/*.apk
-          if-no-files-found: warn
-          retention-days: 7
+          path: dist_android/*.apk
