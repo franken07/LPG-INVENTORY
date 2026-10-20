@@ -14,7 +14,7 @@ from sqlalchemy.orm import (
 )
 
 from PySide6.QtCore import Qt, QDate, QUrl
-from PySide6.QtGui import QFont, QGuiApplication
+from PySide6.QtGui import QFont, QGuiApplication, QColor, QIcon
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QPushButton, QTableWidget, QTableWidgetItem,
@@ -268,7 +268,7 @@ class MapPickerDialog(QDialog):
         layout.setSpacing(12)
 
         top_bar = QHBoxLayout()
-        info_lbl = QLabel("💡 Switch to Satellite view to see actual rooftops and houses, then click to pin exact location.")
+        info_lbl = QLabel("🗺️ Switch to Satellite view to see actual rooftops and houses, then click to pin exact location.")
         info_lbl.setStyleSheet("font-weight: 700; color: #334155;")
         top_bar.addWidget(info_lbl)
         top_bar.addStretch()
@@ -294,7 +294,6 @@ class MapPickerDialog(QDialog):
 
         self.selected_link = ""
         
-        # Default starting coords (Binmaley / Pangasinan area: 16.035, 120.345)
         lat, lon = 16.035, 120.345
         if initial_link and "q=" in initial_link:
             try:
@@ -400,7 +399,7 @@ def get_app_stylesheet(font_pt=13):
 QWidget {{
     font-family: "Segoe UI", Arial, sans-serif;
     font-size: {font_pt}pt;
-    color: #090D16;
+    color: #0F172A;
 }}
 QMainWindow, QWidget#central {{
     background-color: #F8FAFC;
@@ -410,7 +409,7 @@ QDialog {{
     color: #0F172A;
 }}
 QFrame#sidebar {{
-    background-color: #090D16;
+    background-color: #0F172A;
     border: none;
 }}
 QLabel#brand {{
@@ -644,6 +643,18 @@ def style_table(table, default_row_height=56):
     )
 
 
+def set_balance_cell_style(item, raw_balance):
+    item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+    item.setFont(QFont("Segoe UI", 12, QFont.Weight.Bold))
+    
+    if raw_balance > 0:
+        item.setBackground(QColor("#FEE2E2"))
+        item.setForeground(QColor("#991B1B"))
+    else:
+        item.setBackground(QColor("#DCFCE7"))
+        item.setForeground(QColor("#166534"))
+
+
 # =========================================================
 # RECORD PAYMENT DIALOG
 # =========================================================
@@ -757,7 +768,7 @@ class CustomerProfileDialog(QDialog):
         self.map_button.clicked.connect(self.open_customer_map)
         header_row.addWidget(self.map_button)
 
-        self.pay_button = make_button("＋ Record Payment", "primary")
+        self.pay_button = make_button("➕ Record Payment", "primary")
         self.pay_button.clicked.connect(self.open_record_payment_dialog)
         header_row.addWidget(self.pay_button)
 
@@ -838,8 +849,10 @@ class CustomerProfileDialog(QDialog):
 
                 for col_idx, val in enumerate(values):
                     cell = QTableWidgetItem(str(val))
-                    if col_idx in [4, 5, 6, 7]:
+                    if col_idx in [4, 5, 6]:
                         cell.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                    if col_idx == 7:
+                        set_balance_cell_style(cell, balance)
                     self.history_table.setItem(row_idx, col_idx, cell)
 
             payment_rows = session.execute(
@@ -1087,9 +1100,9 @@ class LPGManager(QMainWindow):
 
         self.current_font_size = 13
         self.exchange_payment_filter = "All"
-        self.exchange_date_mode = "Today"  # Default to Today
+        self.exchange_date_mode = "Today"
 
-        self.setWindowTitle("LPG Manager — High-Visibility Accessible Edition")
+        self.setWindowTitle("LPG Manager — High-Visibility Professional Edition")
         self.resize(1350, 820)
         self.setMinimumSize(1050, 720)
 
@@ -1118,16 +1131,17 @@ class LPGManager(QMainWindow):
         )
         side.addSpacing(25)
 
-        for name, icon in [
-            ("Dashboard", "▦"),
-            ("Inventory", "▤"),
-            ("Exchanges", "⇄"),
-            ("Customers & Credit", "♙"),
+        nav_items = [
+            ("Dashboard", "📊"),
+            ("Inventory", "📦"),
+            ("Exchanges", "🔄"),
+            ("Customers & Credit", "👥"),
             ("Reminders & Debt", "🔔"),
-            ("Purchases", "＋"),
-            ("Returns & Damages", "⚠"),
-            ("Reports", "▥"),
-        ]:
+            ("Returns & Damages", "🛡️"),
+            ("Reports", "📈"),
+        ]
+
+        for name, icon in nav_items:
             button = QPushButton(f"{icon}    {name}")
             button.setObjectName("nav")
             button.setProperty("selected", name == "Dashboard")
@@ -1223,15 +1237,18 @@ class LPGManager(QMainWindow):
 
         self.alert_banner = QFrame()
         self.alert_banner.setObjectName("card")
-        self.alert_banner.setStyleSheet("background-color: #FEF2F2; border: 2px solid #FCA5A5; border-radius: 12px;")
+        
         alert_layout = QHBoxLayout(self.alert_banner)
         alert_layout.setContentsMargins(18, 14, 18, 14)
 
-        self.alert_label = QLabel("⚠️ System Alert: All stock levels are sufficient and no overdue payments detected.")
-        self.alert_label.setStyleSheet("color: #991B1B; font-weight: 800; font-size: 12pt;")
-        alert_layout.addWidget(self.alert_label)
-        
-        self.alert_banner.setVisible(False)
+        self.alert_icon = QLabel("⚠️")
+        self.alert_icon.setStyleSheet("font-size: 16pt;")
+        alert_layout.addWidget(self.alert_icon)
+
+        self.alert_label = QLabel("System Alert: Checking business status...")
+        self.alert_label.setStyleSheet("font-weight: 800; font-size: 12pt;")
+        alert_layout.addWidget(self.alert_label, 1)
+
         layout.addWidget(self.alert_banner)
 
         cards_row = QHBoxLayout()
@@ -1239,9 +1256,9 @@ class LPGManager(QMainWindow):
 
         card_specs = [
             ("Full Cylinders", "📦", "Ready for exchange"),
-            ("Empty Cylinders", "↻", "Available for refill"),
-            ("Damaged Cylinders", "⚠", "Quarantined stock"),
-            ("With Customers", "♙", "Customer-held cylinders"),
+            ("Empty Cylinders", "🔄", "Available for refill"),
+            ("Damaged Cylinders", "🛡️", "Quarantined stock"),
+            ("With Customers", "👥", "Customer-held cylinders"),
         ]
 
         self.card_values = {}
@@ -1277,21 +1294,21 @@ class LPGManager(QMainWindow):
 
         action_row = QHBoxLayout()
 
-        new_txn = make_button("＋  Customer Transaction", "primary")
+        new_txn = make_button("➕  Customer Transaction", "primary")
         new_txn.clicked.connect(self.open_customer_transaction_dialog)
 
         opening_stock = make_button(
-            "＋  Set Opening Stock", "secondary"
+            "➕  Set Opening Stock", "secondary"
         )
         opening_stock.clicked.connect(self.set_opening_stock)
 
-        new_stock = make_button("＋  New Stock / Buy", "secondary")
+        new_stock = make_button("➕  New Stock / Buy", "secondary")
         new_stock.clicked.connect(self.open_new_stock_dialog)
 
         record_exp = make_button("💸  Record Expense / Gas", "secondary")
         record_exp.clicked.connect(self.open_record_expense_dialog)
 
-        refresh = make_button("↻  Refresh Data", "secondary")
+        refresh = make_button("🔄  Refresh Data", "secondary")
         refresh.clicked.connect(self.refresh_all)
 
         action_row.addWidget(new_txn)
@@ -1323,7 +1340,7 @@ class LPGManager(QMainWindow):
         self.search_input.textChanged.connect(self.filter_inventory)
         toolbar.addWidget(self.search_input, 1)
 
-        stock_button = make_button("＋  New Stock / Buy", "primary")
+        stock_button = make_button("➕  New Stock / Buy", "primary")
         stock_button.clicked.connect(self.open_new_stock_dialog)
         toolbar.addWidget(stock_button)
 
@@ -1333,7 +1350,7 @@ class LPGManager(QMainWindow):
         opening_button.clicked.connect(self.set_opening_stock)
         toolbar.addWidget(opening_button)
 
-        refresh_button = make_button("↻ Refresh", "secondary")
+        refresh_button = make_button("🔄 Refresh", "secondary")
         refresh_button.clicked.connect(self.refresh_all)
         toolbar.addWidget(refresh_button)
 
@@ -1367,7 +1384,6 @@ class LPGManager(QMainWindow):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(18)
 
-        # Top Bar: Search and New Transaction
         toolbar = QHBoxLayout()
 
         self.exchange_search_input = QLineEdit()
@@ -1390,20 +1406,19 @@ class LPGManager(QMainWindow):
         toolbar.addWidget(self.exchange_type_filter)
 
         new_txn_button = make_button(
-            "＋  New Customer Transaction", "primary"
+            "➕  New Customer Transaction", "primary"
         )
         new_txn_button.clicked.connect(
             self.open_customer_transaction_dialog
         )
         toolbar.addWidget(new_txn_button)
 
-        refresh_button = make_button("↻ Refresh", "secondary")
+        refresh_button = make_button("🔄 Refresh", "secondary")
         refresh_button.clicked.connect(self.refresh_exchanges)
         toolbar.addWidget(refresh_button)
 
         layout.addLayout(toolbar)
 
-        # Date & Payment Filter Bar
         filter_row = QHBoxLayout()
         filter_row.setSpacing(10)
 
@@ -1502,7 +1517,7 @@ class LPGManager(QMainWindow):
         )
         toolbar.addWidget(self.customer_search_input, 1)
 
-        refresh_button = make_button("↻ Refresh", "secondary")
+        refresh_button = make_button("🔄 Refresh", "secondary")
         refresh_button.clicked.connect(self.refresh_customers)
         toolbar.addWidget(refresh_button)
 
@@ -1539,7 +1554,7 @@ class LPGManager(QMainWindow):
         toolbar.addWidget(make_label("Track overdue customer credit balances and copy instant SMS payment reminders."))
         toolbar.addStretch()
 
-        refresh_btn = make_button("↻ Refresh Reminders", "secondary")
+        refresh_btn = make_button("🔄 Refresh Reminders", "secondary")
         refresh_btn.clicked.connect(self.refresh_reminders)
         toolbar.addWidget(refresh_btn)
 
@@ -1603,7 +1618,7 @@ class LPGManager(QMainWindow):
 
         toolbar = QHBoxLayout()
 
-        report_btn = make_button("＋  Report Damaged Tank", "primary")
+        report_btn = make_button("➕  Report Damaged Tank", "primary")
         report_btn.clicked.connect(self.open_report_damage_dialog)
         toolbar.addWidget(report_btn)
 
@@ -1613,7 +1628,7 @@ class LPGManager(QMainWindow):
 
         toolbar.addStretch()
 
-        refresh_btn = make_button("↻ Refresh", "secondary")
+        refresh_btn = make_button("🔄 Refresh", "secondary")
         refresh_btn.clicked.connect(self.refresh_damages)
         toolbar.addWidget(refresh_btn)
 
@@ -1658,7 +1673,7 @@ class LPGManager(QMainWindow):
 
         toolbar.addStretch()
 
-        refresh_btn = make_button("↻ Refresh Reports", "secondary")
+        refresh_btn = make_button("🔄 Refresh Reports", "secondary")
         refresh_btn.clicked.connect(self.refresh_reports)
         toolbar.addWidget(refresh_btn)
 
@@ -1832,7 +1847,7 @@ class LPGManager(QMainWindow):
         self.stack.setCurrentWidget(self.placeholder_pages[page_name])
 
     # -----------------------------------------------------
-    # REFRESH DATA & ALERT BANNER
+    # REFRESH DATA & ALERT BANNER FIX
     # -----------------------------------------------------
 
     def refresh_all(self):
@@ -1872,10 +1887,17 @@ class LPGManager(QMainWindow):
             alerts.append("🔔 Notice: You have pending uncollected customer credit accounts.")
 
         if alerts:
+            self.alert_banner.setStyleSheet("background-color: #FEF2F2; border: 2px solid #FCA5A5; border-radius: 12px;")
+            self.alert_icon.setText("⚠️")
             self.alert_label.setText("   |   ".join(alerts))
+            self.alert_label.setStyleSheet("color: #991B1B; font-weight: 800; font-size: 12pt;")
             self.alert_banner.setVisible(True)
         else:
-            self.alert_banner.setVisible(False)
+            self.alert_banner.setStyleSheet("background-color: #F0FDF4; border: 2px solid #86EFAC; border-radius: 12px;")
+            self.alert_icon.setText("✅")
+            self.alert_label.setText("All stock levels are optimal and no overdue debt warnings detected.")
+            self.alert_label.setStyleSheet("color: #166534; font-weight: 800; font-size: 12pt;")
+            self.alert_banner.setVisible(True)
 
         totals = {
             "Full Cylinders": sum(r["full"] for r in inventory),
@@ -1965,6 +1987,7 @@ class LPGManager(QMainWindow):
                     "total": f"₱{total:,.2f}",
                     "paid": f"₱{paid:,.2f}",
                     "balance": f"₱{balance:,.2f}",
+                    "raw_balance": balance,
                     "raw_type": ex.transaction_type,
                     "payment_status": ex.payment_status,
                     "search_text": (
@@ -2006,6 +2029,7 @@ class LPGManager(QMainWindow):
                     "map_status": map_status,
                     "txn_count": txn_count,
                     "balance": f"₱{total_credit:,.2f}",
+                    "raw_balance": total_credit,
                     "search_text": f"{cust.name} {cust.phone} {cust.address}".casefold()
                 })
 
@@ -2074,8 +2098,10 @@ class LPGManager(QMainWindow):
 
                 for col_idx, val in enumerate(values):
                     cell = QTableWidgetItem(str(val))
-                    if col_idx in [1, 2, 3, 4, 5, 6]:
+                    if col_idx in [1, 2, 3, 4, 6]:
                         cell.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                    if col_idx == 5:
+                        set_balance_cell_style(cell, item["raw_balance"])
                     if col_idx == 7:
                         cell.setForeground(Qt.GlobalColor.blue)
                         cell.setFont(QFont("Segoe UI", self.current_font_size - 2, QFont.Weight.Bold))
@@ -2500,8 +2526,10 @@ class LPGManager(QMainWindow):
                     cell.setFont(
                         QFont("Segoe UI", self.current_font_size - 2, QFont.Weight.Bold)
                     )
-                if col in [4, 5, 6, 7, 8]:
+                if col in [4, 5, 6, 7]:
                     cell.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                if col == 8:
+                    set_balance_cell_style(cell, item["raw_balance"])
                 self.exchanges_table.setItem(row, col, cell)
 
     def filter_customers(self):
@@ -2534,8 +2562,10 @@ class LPGManager(QMainWindow):
                     cell.setFont(
                         QFont("Segoe UI", self.current_font_size, QFont.Weight.Bold)
                     )
-                if col in [1, 2, 3, 4, 5, 6]:
+                if col in [1, 2, 3, 4, 6]:
                     cell.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                if col == 5:
+                    set_balance_cell_style(cell, item["raw_balance"])
                 if col == 3 and item["map_link"]:
                     cell.setForeground(Qt.GlobalColor.blue)
                 cell.setData(Qt.ItemDataRole.UserRole, item["id"])
@@ -3449,6 +3479,8 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
     app.setStyleSheet(get_app_stylesheet(13))
+
+    app.setWindowIcon(QIcon("gas.ico")) 
 
     window = LPGManager()
     window.show()

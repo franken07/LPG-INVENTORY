@@ -1,0 +1,23 @@
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Local database
+lpgmanager.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# Build output
+build/
+dist/
+
+# Secrets
+.env
+.env.*
+
+# Logs
+*.log
