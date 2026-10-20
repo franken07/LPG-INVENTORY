@@ -1,11 +1,12 @@
-
-# Python
-__pycache__/
-*.py[cod]
+# Python environment
 .venv/
 venv/
 
-# Local database
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Database
 lpgmanager.db
 *.db-journal
 *.sqlite
